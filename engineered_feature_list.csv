@@ -1,0 +1,17 @@
+0
+Age
+BMI
+prior back surgeries? (y=1)
+length of hospital stay (d)
+pi_ll_mismatch_ge_10
+alif_present
+mechanical_load_score
+age_times_mismatch
+surgery_group_lateral
+surgery_group_other_surgery
+surgery_group_posterior_decompression
+surgery_group_posterior_fusion
+surgery_group_tlif_plif
+pca_radio_1
+pca_radio_2
+pca_radio_3
