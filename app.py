@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import pickle
 from sksurv.metrics import concordance_index_censored
+import json
+from fastapi.responses import StreamingResponse
+from typing import Generator
 
 app = FastAPI(title="ASD Survival API", version="1.0")
 
@@ -111,6 +114,37 @@ def preprocess(df_raw: pd.DataFrame):
     X_final = X_final[feature_cols]
     return X_final.values.astype(float)
 
+def run_asd_inference(payload: dict):
+    X_raw = build_raw_row(payload)
+    Xp = preprocess(X_raw)
+
+    surv_fn = rsf.predict_survival_function(Xp, return_array=False)[0]
+    times = surv_fn.x.tolist()
+    probs = surv_fn.y.tolist()
+
+    def interp(t):
+        return float(np.interp(t, surv_fn.x, surv_fn.y))
+
+    horizons = {str(t): interp(t) for t in [12, 24, 36, 60]}
+
+    median = None
+    for t, s in zip(surv_fn.x, surv_fn.y):
+        if s <= 0.5:
+            median = float(t)
+            break
+
+    cohort_risk = rsf.predict(X_vals)
+    patient_risk = rsf.predict(Xp)[0]
+    percentile = float((cohort_risk < patient_risk).mean() * 100)
+
+    return {
+        "survival_curve": {"times": times, "probs": probs},
+        "asd_free_prob": horizons,
+        "median_time_months": median,
+        "risk_percentile": percentile,
+    }
+
+
 # -------------------------
 # API endpoint
 # -------------------------
@@ -155,3 +189,57 @@ def predict_asd(inp: PatientInput):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/predict/asd/stream")
+async def predict_asd_stream(req: Request):
+
+    async def event_stream() -> Generator[str, None, None]:
+        try:
+            yield sse("loading", {"pct": 5, "msg": "Initializing model"})
+
+            payload = await req.json()
+
+            yield sse("progress", {"pct": 20, "msg": "Preparing features"})
+            X_raw = build_raw_row(payload)
+            Xp = preprocess(X_raw)
+
+            yield sse("progress", {"pct": 45, "msg": "Running survival forest"})
+            surv_fn = rsf.predict_survival_function(Xp, return_array=False)[0]
+
+            yield sse("progress", {"pct": 65, "msg": "Computing survival curve"})
+            times = surv_fn.x.tolist()
+            probs = surv_fn.y.tolist()
+
+            def interp(t):
+                return float(np.interp(t, surv_fn.x, surv_fn.y))
+
+            yield sse("progress", {"pct": 80, "msg": "Estimating ASD-free probabilities"})
+            horizons = {str(t): interp(t) for t in [12, 24, 36, 60]}
+
+            yield sse("progress", {"pct": 95, "msg": "Estimating cohort-relative risk"})
+            cohort_risk = rsf.predict(X_vals)
+            patient_risk = rsf.predict(Xp)[0]
+            percentile = float((cohort_risk < patient_risk).mean() * 100)
+
+            median = None
+            for t, s in zip(times, probs):
+                if s <= 0.5:
+                    median = float(t)
+                    break
+
+            result = {
+                "survival_curve": {"times": times, "probs": probs},
+                "asd_free_prob": horizons,
+                "median_time_months": median,
+                "risk_percentile": percentile,
+            }
+
+            yield sse("done", result)
+
+        except Exception as e:
+            yield sse("error", str(e))
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+def sse(event: str, data):
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
