@@ -118,12 +118,6 @@ def preprocess(df_raw: pd.DataFrame):
 def predict_asd(inp: PatientInput):
     try:
         payload = inp.dict()
-
-        # extract surgery text features
-        surgery_feats = extract_surgery_text_features(
-            payload.get("surgery_description", "")
-        )
-        payload.update(surgery_feats)
         X_raw = build_raw_row(payload)
         Xp = preprocess(X_raw)
 
@@ -162,45 +156,3 @@ def predict_asd(inp: PatientInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-def extract_surgery_text_features(text: str):
-    t = (text or "").lower()
-
-    return {
-        "revision_surgery": int(
-            bool(
-                ("revision" in t)
-                or ("hardware removal" in t)
-                or ("removal of hardware" in t)
-            )
-        ),
-
-        "deformity_case_text": int(
-            bool(
-                ("deformity" in t)
-                or ("flat back" in t)
-                or ("sagittal imbalance" in t)
-                or ("scoliosis" in t)
-            )
-        ),
-
-        "llif_or_lateral_text": int(
-            ("llif" in t) or ("lateral" in t)
-        ),
-
-        "xlif_text": int(
-            "xlif" in t
-        ),
-
-        "alif_text": int(
-            "alif" in t
-        ),
-
-        "anterior_posterior_approach": int(
-            ("anterior" in t) and ("posterior" in t)
-        ),
-
-        "osteotomy_text": int(
-            ("osteotomy" in t) or ("pso" in t)
-        ),
-    }
