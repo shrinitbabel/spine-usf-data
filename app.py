@@ -68,6 +68,22 @@ class PatientInput(BaseModel):
     Post_op_SS: float
 
     LOS: float
+    Open_Check_V2: int = 0
+    Standalone_XLIF_Check: int = 0
+    Retroperitoneal_Approach_LLIF_ALIF: int = 0
+    Anterior_Posterior_Apporoach: int = 0
+    Osteotomies_yes_no: int = 0
+
+    infection_1_yes: int = 0
+    DVT_1_yes: int = 0
+    PE_1_yes: int = 0
+    MI_1_yes: int = 0
+    femoral_palsy_1_yes: int = 0
+    hip_flexion_weakness_1_yes: int = 0
+    acute_thigh_paresthesia: int = 0
+    psoas_hematoma: int = 0
+
+
 
 # -------------------------
 # Utilities
@@ -156,3 +172,6 @@ def predict_asd(inp: PatientInput):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+print("=== MODEL FEATURE COLUMNS ===")
+for c in feature_cols:
+    print(c)
