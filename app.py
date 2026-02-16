@@ -176,3 +176,13 @@ def predict_asd(inp: PatientInput):
 print("=== MODEL FEATURE COLUMNS ===")
 for c in feature_cols:
     print(c)
+
+global_importance = dict(
+    zip(feature_cols, rsf.feature_importances_)
+)
+
+@app.get("/model-info")
+def model_info():
+    return {
+        "global_feature_importance": global_importance
+    }
