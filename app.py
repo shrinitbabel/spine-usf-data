@@ -125,7 +125,7 @@ def preprocess(df_raw: pd.DataFrame):
     )
 
     X_final = X_final[feature_cols]
-    return X_final.values.astype(float)
+    return X_final.values.astype(float), df_pcs.iloc[0].to_dict()
 
 # -------------------------
 # API endpoint
@@ -135,7 +135,7 @@ def predict_asd(inp: PatientInput):
     try:
         payload = inp.dict()
         X_raw = build_raw_row(payload)
-        Xp = preprocess(X_raw)
+        Xp, pca_scores = preprocess(X_raw)
 
         surv_fn = rsf.predict_survival_function(Xp, return_array=False)[0]
         times = surv_fn.x.tolist()
@@ -167,6 +167,7 @@ def predict_asd(inp: PatientInput):
             "asd_free_prob": horizons,
             "median_time_months": median,
             "risk_percentile": percentile,
+            "pca_scores": pca_scores,
         }
 
     except Exception as e:
