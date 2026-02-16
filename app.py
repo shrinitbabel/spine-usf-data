@@ -127,6 +127,24 @@ def preprocess(df_raw: pd.DataFrame):
     X_final = X_final[feature_cols]
     return X_final.values.astype(float), df_pcs.iloc[0].to_dict()
 
+
+# -------------------------
+# PCA Loadings (INTERPRETABLE)
+# -------------------------
+pca_loadings = {
+    f"pca_num_{i+1}": dict(
+        zip(numeric_present, pca.components_[i])
+    )
+    for i in range(pca.components_.shape[0])
+}
+
+@app.get("/model-info")
+def model_info():
+    return {
+        "pca_loadings": pca_loadings
+    }
+
+
 # -------------------------
 # API endpoint
 # -------------------------
@@ -177,19 +195,4 @@ print("=== MODEL FEATURE COLUMNS ===")
 for c in feature_cols:
     print(c)
 
-global_importance = dict(
-    zip(feature_cols, rsf.feature_importances_)
-)
-pca_loadings = {
-    f"pca_num_{i+1}": dict(
-        zip(numeric_present, pca.components_[i])
-    )
-    for i in range(pca.components_.shape[0])
-}
 
-@app.get("/model-info")
-def model_info():
-    return {
-        "global_feature_importance": global_importance,
-        "pca_loadings": pca_loadings
-    }
