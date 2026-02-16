@@ -4,8 +4,19 @@ import numpy as np
 import pandas as pd
 import pickle
 from sksurv.metrics import concordance_index_censored
+from fastapi.middleware.cors import CORSMiddleware
+
+
+
 
 app = FastAPI(title="ASD Survival API", version="1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict to your vercel domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/healthz")
 def healthz():
