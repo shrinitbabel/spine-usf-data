@@ -187,7 +187,6 @@ pca_loadings = {
     for i in range(pca.components_.shape[0])
 }
 
-
 @app.get("/model-info")
 def model_info():
     return {
