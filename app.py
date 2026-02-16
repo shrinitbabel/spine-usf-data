@@ -180,9 +180,17 @@ for c in feature_cols:
 global_importance = dict(
     zip(feature_cols, rsf.feature_importances_)
 )
+pca_loadings = {
+    f"pca_num_{i+1}": dict(
+        zip(numeric_present, pca.components_[i])
+    )
+    for i in range(pca.components_.shape[0])
+}
+
 
 @app.get("/model-info")
 def model_info():
     return {
-        "global_feature_importance": global_importance
+        "global_feature_importance": global_importance,
+        "pca_loadings": pca_loadings
     }
