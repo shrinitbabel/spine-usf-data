@@ -47,6 +47,8 @@ FIELD_TO_COL = {
 
     "post_LL": "post LL",
     "post_SVA": "post SVA",
+    "post_PI": "post PI",
+    "post_PT": "post PT",
     "Post_op_SS": "Post-op SS",
 
     "LOS": "length of hospital stay (d)",
@@ -103,6 +105,8 @@ class PatientInput(BaseModel):
 
     post_LL: float
     post_SVA: float
+    post_PI: float
+    post_PT: float
     Post_op_SS: float
 
     LOS: float
@@ -152,7 +156,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ASD Survival API", version="1.1", lifespan=lifespan)
+app = FastAPI(title="ASD Survival API", version="1.2", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
