@@ -1,6 +1,9 @@
+import asyncio
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import numpy as np
 import pandas as pd
@@ -9,6 +12,8 @@ import pickle
 import torch
 import torchtuples as tt
 from pycox.models import CoxPH as CoxPH_NN
+
+import shap
 
 
 # Maps each Pydantic field to the column header the trained model actually uses.
@@ -197,10 +202,28 @@ async def lifespan(app: FastAPI):
     if state["deepsurv"] is not None:
         torch.set_num_threads(1)  # serving on a single Render worker, no need for more
         print("DeepSurv bundle loaded.")
+
+    # SHAP explainer for RSF — model-agnostic PermutationExplainer because
+    # sksurv's RSF is not natively supported by shap.TreeExplainer. Build
+    # once at startup with a 50-sample background drawn from the training
+    # cohort; per-patient explanation then takes ~5–12s on first call,
+    # ~0.6s per call thereafter.
+    try:
+        rng = np.random.RandomState(42)
+        X_train = np.asarray(bundle["X_vals"], dtype=float)
+        bg_idx = rng.choice(len(X_train), 50, replace=False)
+        state["shap_bg"] = X_train[bg_idx]
+        state["shap_explainer"] = shap.PermutationExplainer(
+            state["rsf"].predict, state["shap_bg"]
+        )
+        print("SHAP explainer built (background=50).")
+    except Exception as ex:
+        print(f"WARN: SHAP explainer failed to initialize: {ex}")
+        state["shap_explainer"] = None
     yield
 
 
-app = FastAPI(title="ASD Survival API", version="1.4", lifespan=lifespan)
+app = FastAPI(title="ASD Survival API", version="1.5", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -216,6 +239,7 @@ def healthz():
         "status": "ok",
         "model_loaded": "rsf" in state,
         "deepsurv_loaded": state.get("deepsurv") is not None,
+        "shap_loaded": state.get("shap_explainer") is not None,
     }
 
 
@@ -442,3 +466,118 @@ def predict_asd_ensemble(inp: PatientInput):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ----------------------------------------------------------------------
+# SHAP explanation — streaming endpoint (Server-Sent Events)
+# ----------------------------------------------------------------------
+
+def _pretty_feature(name: str) -> str:
+    if name == "pca_num_1": return "Post-op alignment composite"
+    if name == "pca_num_2": return "Operative burden composite"
+    if name == "pca_num_3": return "Sagittal mismatch composite"
+    if name == "(1 = PI>50)": return "Pelvic incidence > 50°"
+    if name == "Anterior + Posterior Apporoach": return "Anterior + posterior approach"
+    if name == "prior back surgeries? (y=1)": return "Prior back surgery"
+    if name == "Perc screws?": return "Percutaneous screws"
+    if name == "Standalone XLIF Check": return "Standalone XLIF"
+    if name == "Open Check V2": return "Open approach (V2)"
+    if name == "Retroperitoneal Approach (LLIF ± ALIF)": return "Retroperitoneal LLIF/ALIF"
+    if name == "Osteotomies (yes/no)": return "Osteotomies"
+    if name == "ACR (y=1)": return "Anterior column release"
+    if name.startswith("dx_"): return "Diagnosis: " + name[3:].replace("_", " ")
+    if name == "length of hospital stay (d)": return "Length of stay"
+    return name
+
+
+def _sse(payload: dict) -> str:
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+@app.post("/predict/asd/explain")
+async def explain_asd(inp: PatientInput):
+    """Per-patient SHAP attribution for the RSF prediction.
+
+    Returns Server-Sent Events because permutation SHAP can take 5–12s on
+    the first call and ~0.6s thereafter. Events:
+      starting   — preprocessing the input
+      computing  — SHAP in progress, with elapsed seconds
+      ready      — final payload with top contributors
+      error      — anything went wrong
+    """
+    if state.get("shap_explainer") is None:
+        raise HTTPException(status_code=503, detail="SHAP explainer not loaded")
+
+    payload = inp.model_dump()
+
+    async def generate():
+        try:
+            yield _sse({"status": "starting",
+                        "message": "Preparing patient features…"})
+            X_raw = build_raw_row(payload)
+            Xp, _ = preprocess(X_raw)
+            yield _sse({"status": "computing", "elapsed": 0,
+                        "message": "Computing SHAP attributions…"})
+
+            # Run SHAP in a thread so the event loop can keep emitting
+            # keep-alive events.
+            task = asyncio.create_task(asyncio.to_thread(
+                state["shap_explainer"], Xp
+            ))
+            elapsed = 0
+            while not task.done():
+                await asyncio.sleep(1.0)
+                elapsed += 1
+                yield _sse({"status": "computing", "elapsed": elapsed,
+                            "message": f"Computing SHAP… ({elapsed}s)"})
+            shap_obj = await task
+
+            sv = np.asarray(shap_obj.values[0], dtype=float)
+            base = float(shap_obj.base_values[0])
+
+            feats = state["feature_cols"]
+            patient_x = Xp[0]
+            order = np.argsort(np.abs(sv))[::-1][:10]
+            contributors = [
+                {
+                    "feature": feats[i],
+                    "display_name": _pretty_feature(feats[i]),
+                    "shap_value": float(sv[i]),
+                    "patient_value": float(patient_x[i]),
+                    "direction": "increases" if sv[i] > 0 else "decreases",
+                }
+                for i in order
+            ]
+
+            patient_risk = float(state["rsf"].predict(Xp)[0])
+            cohort_risk = state["cohort_risk"]
+            percentile = float((cohort_risk < patient_risk).mean() * 100)
+
+            yield _sse({
+                "status": "ready",
+                "elapsed": elapsed,
+                "contributors": contributors,
+                "base_value": base,
+                "patient_risk": patient_risk,
+                "risk_percentile": percentile,
+                "model": "rsf",
+                "note": (
+                    "SHAP attributions reflect patterns the RSF learned from the "
+                    "training cohort, which may not fully match published causal "
+                    "risk relationships — particularly for patients with extensive "
+                    "deformity (cohort selection effects). Interpret with clinical "
+                    "judgment."
+                ),
+            })
+        except Exception as e:
+            yield _sse({"status": "error", "message": str(e)})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "cache-control": "no-cache, no-transform",
+            "connection": "keep-alive",
+            "x-accel-buffering": "no",   # disables nginx-style buffering on Render
+        },
+    )
