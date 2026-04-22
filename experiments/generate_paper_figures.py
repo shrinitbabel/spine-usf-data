@@ -532,6 +532,110 @@ if corr:
     plt.close(fig)
     print("fig12 saved")
 
+# ==========================================================================
+# FIG 13 — All base models: OOF C-index (the "model selection" figure)
+# ==========================================================================
+oof = ext.get("oof_cindex", {})
+ens = ext.get("ensembles", {})
+
+# Individual models with full names
+indiv_label = {
+    "RSF": "Random Survival Forest",
+    "DeepSurv": "DeepSurv (CoxPH neural net)",
+    "GBSA": "Gradient Boosting Survival",
+    "CWGB": "Componentwise Gradient Boost",
+    "Coxnet": "Cox elastic-net",
+}
+indiv_palette = {
+    "RSF": "#2563eb", "DeepSurv": "#dc2626", "GBSA": "#f59e0b",
+    "CWGB": "#10b981", "Coxnet": "#64748b",
+}
+
+# Ensemble entry: rank-averaged RSF + DeepSurv (the one we deployed)
+deployed_ens_key = "RSF+DeepSurv"
+deployed_ens_C = ens.get(deployed_ens_key, np.nan)
+
+# Build sorted bar list
+bars = [(indiv_label[k], oof[k], indiv_palette[k], False) for k in indiv_label if k in oof]
+bars.append(("Ensemble (RSF + DeepSurv)", deployed_ens_C, "#7c3aed", True))
+bars.sort(key=lambda x: x[1])  # ascending so highest C is at the top of horizontal bars
+
+fig, axes = plt.subplots(1, 2, figsize=(13, 5),
+                          gridspec_kw={"width_ratios": [1.4, 1]})
+
+# Left panel — all models, OOF C-index
+ax = axes[0]
+ypos = np.arange(len(bars))
+for i, (label, c, color, is_ens) in enumerate(bars):
+    ax.barh(i, c, color=color, edgecolor="white", alpha=0.9,
+            hatch="//" if is_ens else None)
+    ax.text(c + 0.005, i, f"{c:.3f}", va="center", fontsize=9, fontweight="bold")
+ax.set_yticks(ypos)
+ax.set_yticklabels([b[0] for b in bars])
+ax.axvline(0.5, color="grey", linestyle=":", linewidth=1, alpha=0.7,
+           label="Chance (C = 0.5)")
+ax.axvline(max(b[1] for b in bars), color="#2563eb", linestyle="--",
+           linewidth=1, alpha=0.5, label="Best single model")
+ax.set_xlim(0.5, max(b[1] for b in bars) + 0.05)
+ax.set_xlabel("Out-of-fold concordance index")
+ax.set_title("(A) All evaluated survival models — pooled OOF C-index")
+ax.legend(loc="lower right", fontsize=8)
+
+legend_patches = [
+    Patch(facecolor="#94a3b8", edgecolor="white", label="Individual model"),
+    Patch(facecolor="#7c3aed", edgecolor="white", hatch="//", label="Ensemble (rank-average)"),
+]
+ax.legend(handles=legend_patches + [
+    plt.Line2D([0], [0], color="grey", linestyle=":", label="Chance (C = 0.5)"),
+], loc="lower right", fontsize=8)
+
+# Right panel — ensembling failed to improve over RSF
+ax = axes[1]
+ens_keys = [
+    "RSF",
+    "RSF+DeepSurv",
+    "RSF+GBSA",
+    "RSF+CWGB",
+    "RSF+Coxnet",
+    "RSF+GBSA+DeepSurv",
+    "RSF+GBSA+Coxnet+CWGB+DeepSurv",
+]
+labels_short = [
+    "RSF alone",
+    "+ DeepSurv",
+    "+ GBSA",
+    "+ CWGB",
+    "+ Coxnet",
+    "+ DeepSurv + GBSA",
+    "All five",
+]
+ens_lookup = {**{"RSF": oof.get("RSF")}, **ens}
+vals = [ens_lookup.get(k, np.nan) for k in ens_keys]
+
+ypos = np.arange(len(ens_keys))
+colors = ["#2563eb"] + ["#7c3aed"] * (len(ens_keys) - 1)
+for i, (lab, v, color) in enumerate(zip(labels_short, vals, colors)):
+    ax.barh(i, v, color=color, edgecolor="white", alpha=0.85,
+            hatch="//" if i > 0 else None)
+    ax.text(v + 0.002, i, f"{v:.3f}", va="center", fontsize=9, fontweight="bold")
+ax.set_yticks(ypos)
+ax.set_yticklabels(labels_short)
+ax.invert_yaxis()
+ax.axvline(oof["RSF"], color="#2563eb", linestyle="--", linewidth=1.2,
+           alpha=0.7, label="RSF alone (reference)")
+ax.set_xlim(0.55, max(v for v in vals if not np.isnan(v)) + 0.02)
+ax.set_xlabel("OOF concordance index")
+ax.set_title("(B) Ensembling — no improvement over RSF alone")
+ax.legend(loc="lower right", fontsize=8)
+
+fig.suptitle("Model selection — discrimination across all candidate survival models",
+             fontsize=13, y=1.02)
+plt.tight_layout()
+plt.savefig(FIG / "fig13_all_models_comparison.png")
+plt.close(fig)
+print("fig13 saved")
+
+
 print(f"\nAll figures saved to {FIG}/")
 print("\nFile listing:")
 for p in sorted(FIG.glob("*.png")):
