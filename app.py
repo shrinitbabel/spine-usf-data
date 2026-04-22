@@ -200,7 +200,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ASD Survival API", version="1.3", lifespan=lifespan)
+app = FastAPI(title="ASD Survival API", version="1.4", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -358,6 +358,84 @@ def predict_asd_deepsurv(inp: PatientInput):
             "patient_risk": patient_risk,
             "pca_scores": pca_scores,
             "model": "deepsurv",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/predict/asd/ensemble")
+def predict_asd_ensemble(inp: PatientInput):
+    """RSF + DeepSurv ensemble. Best discrimination in cross-validation
+    (C = 0.597 vs RSF 0.591 / DeepSurv 0.578); slightly worse calibration
+    than DeepSurv alone but more reliable on borderline cases. Survival
+    functions are averaged on a common time grid; percentiles are the mean
+    of each component model's cohort percentile."""
+    if state.get("deepsurv") is None:
+        raise HTTPException(status_code=503, detail="DeepSurv bundle not loaded")
+    try:
+        ds = state["deepsurv"]
+        payload = inp.model_dump()
+        X_raw = build_raw_row(payload)
+
+        # RSF side
+        Xp_rsf, pca_scores = preprocess(X_raw)
+        rsf = state["rsf"]
+        risk_rsf = float(rsf.predict(Xp_rsf)[0])
+        rsf_surv = rsf.predict_survival_function(Xp_rsf, return_array=False)[0]
+
+        # DeepSurv side
+        Xp_ds, _ = _preprocess_for_deepsurv(X_raw)
+        with torch.no_grad():
+            ds_surv_df = ds["model"].predict_surv_df(Xp_ds)
+            risk_ds = float(ds["model"].predict(Xp_ds).reshape(-1)[0])
+
+        # Common monthly grid covering the longer of the two curves
+        max_t = max(float(rsf_surv.x[-1]), float(ds_surv_df.index.values[-1]))
+        time_grid = np.arange(0, int(np.ceil(max_t)) + 1, dtype=float)
+
+        s_rsf = np.interp(time_grid, rsf_surv.x, rsf_surv.y,
+                          left=1.0, right=float(rsf_surv.y[-1]))
+        ds_t = ds_surv_df.index.values.astype(float)
+        ds_p = ds_surv_df.iloc[:, 0].values.astype(float)
+        s_ds = np.interp(time_grid, ds_t, ds_p, left=1.0, right=float(ds_p[-1]))
+
+        s_avg = (s_rsf + s_ds) / 2.0
+
+        def interp(t: float) -> float:
+            return float(np.interp(t, time_grid, s_avg))
+
+        horizons = {t: interp(t) for t in [12, 24, 36, 60]}
+
+        median = None
+        for t, s in zip(time_grid, s_avg):
+            if s <= 0.5:
+                median = float(t)
+                break
+
+        # Percentile = mean of each model's cohort percentile (rank-average).
+        # The two risk-score scales differ (RSF: cumulative hazard sum,
+        # DeepSurv: log-partial-hazard), so we can't average raw risks —
+        # we average where each patient sits in *its own* cohort.
+        rsf_pct = float((state["cohort_risk"] < risk_rsf).mean() * 100)
+        ds_pct = float((ds["cohort_risk"] < risk_ds).mean() * 100)
+        percentile = (rsf_pct + ds_pct) / 2.0
+
+        return {
+            "survival_curve": {"times": time_grid.tolist(), "probs": s_avg.tolist()},
+            "asd_free_prob": horizons,
+            "median_time_months": median,
+            "risk_percentile": percentile,
+            "pca_scores": pca_scores,
+            "model": "ensemble",
+            "components": {
+                "rsf_percentile": rsf_pct,
+                "deepsurv_percentile": ds_pct,
+                "rsf_5y": float(np.interp(60, rsf_surv.x, rsf_surv.y)),
+                "deepsurv_5y": float(np.interp(60, ds_t, ds_p)),
+            },
         }
 
     except HTTPException:
