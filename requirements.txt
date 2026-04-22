@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-numpy
+numpy<2
 pandas
 scikit-survival
 scikit-learn
