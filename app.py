@@ -6,6 +6,10 @@ import numpy as np
 import pandas as pd
 import pickle
 
+import torch
+import torchtuples as tt
+from pycox.models import CoxPH as CoxPH_NN
+
 
 # Maps each Pydantic field to the column header the trained model actually uses.
 # Front-end keeps sending JSON-friendly underscored names; we translate to the
@@ -129,6 +133,40 @@ class PatientInput(BaseModel):
 state: dict = {}
 
 
+def _load_deepsurv(bundle_path: str = "models/deepsurv_bundle.pkl"):
+    """Rehydrate the pycox CoxPH model from the saved bundle. Returns None
+    if the bundle is missing — DeepSurv endpoint will then 503."""
+    try:
+        with open(bundle_path, "rb") as f:
+            ds = pickle.load(f)
+    except FileNotFoundError:
+        print("WARN: deepsurv_bundle.pkl not found — /predict/asd/deepsurv disabled.")
+        return None
+    net = tt.practical.MLPVanilla(
+        in_features=ds["in_features"],
+        num_nodes=ds["num_nodes"],
+        out_features=1,
+        batch_norm=True,
+        dropout=ds["dropout"],
+        output_bias=False,
+    )
+    net.load_state_dict(ds["state_dict"])
+    net.eval()
+    model = CoxPH_NN(net, tt.optim.Adam())
+    model.baseline_hazards_ = ds["baseline_hazards"]
+    model.baseline_cumulative_hazards_ = ds["baseline_cumulative_hazards"]
+    return {
+        "model": model,
+        "feature_cols": ds["feature_columns"],
+        "encoded_columns": ds["encoded_columns"],
+        "rare_cols": set(ds["rare_cols"]),
+        "numeric_present": ds["numeric_present"],
+        "scaler": ds["scaler"],
+        "pca": ds["pca"],
+        "cohort_risk": np.asarray(ds["cohort_risk"]).reshape(-1),
+    }
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     with open("models/rsf_bundle.pkl", "rb") as f:
@@ -153,10 +191,16 @@ async def lifespan(app: FastAPI):
     unmapped = [f for f, c in FIELD_TO_COL.items() if c not in encoded]
     if unmapped:
         print("WARN: PatientInput fields not present in encoded_columns:", unmapped)
+
+    # DeepSurv (best calibration in CV — ECE 0.039 @ 12mo, 0.052 @ 24mo).
+    state["deepsurv"] = _load_deepsurv()
+    if state["deepsurv"] is not None:
+        torch.set_num_threads(1)  # serving on a single Render worker, no need for more
+        print("DeepSurv bundle loaded.")
     yield
 
 
-app = FastAPI(title="ASD Survival API", version="1.2", lifespan=lifespan)
+app = FastAPI(title="ASD Survival API", version="1.3", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -168,7 +212,11 @@ app.add_middleware(
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "model_loaded": "rsf" in state}
+    return {
+        "status": "ok",
+        "model_loaded": "rsf" in state,
+        "deepsurv_loaded": state.get("deepsurv") is not None,
+    }
 
 
 @app.get("/model-info")
@@ -243,5 +291,76 @@ def predict_asd(inp: PatientInput):
             "pca_scores": pca_scores,
         }
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _preprocess_for_deepsurv(df_raw: pd.DataFrame):
+    """DeepSurv has its own preprocessing components (same shape as RSF's,
+    but kept separate so the two models can evolve independently)."""
+    ds = state["deepsurv"]
+    X = df_raw[ds["encoded_columns"]]
+    X = X.drop(columns=[c for c in ds["rare_cols"] if c in X.columns], errors="ignore")
+    X_num = X[ds["numeric_present"]].astype(float).values
+    pcs = ds["pca"].transform(ds["scaler"].transform(X_num))
+    df_pcs = pd.DataFrame(
+        pcs,
+        columns=[f"pca_num_{i+1}" for i in range(pcs.shape[1])],
+        index=X.index,
+    )
+    X_final = pd.concat([X.drop(columns=ds["numeric_present"]), df_pcs], axis=1)
+    X_final = X_final[ds["feature_cols"]]
+    return X_final.values.astype("float32"), df_pcs.iloc[0].to_dict()
+
+
+@app.post("/predict/asd/deepsurv")
+def predict_asd_deepsurv(inp: PatientInput):
+    """DeepSurv prediction — same response shape as /predict/asd. Best
+    calibration in cross-validation (ECE 0.039 @ 12mo, 0.052 @ 24mo);
+    use this endpoint for pre-op patient counseling."""
+    if state.get("deepsurv") is None:
+        raise HTTPException(status_code=503, detail="DeepSurv bundle not loaded")
+    try:
+        ds = state["deepsurv"]
+        payload = inp.model_dump()
+        X_raw = build_raw_row(payload)
+        Xp, pca_scores = _preprocess_for_deepsurv(X_raw)
+
+        # Survival function -> aligned (times, probs)
+        with torch.no_grad():
+            surv_df = ds["model"].predict_surv_df(Xp)
+        times = surv_df.index.values.astype(float)
+        probs = surv_df.iloc[:, 0].values.astype(float)
+
+        def interp(t: float) -> float:
+            return float(np.interp(t, times, probs))
+
+        horizons = {t: interp(t) for t in [12, 24, 36, 60]}
+
+        median = None
+        for t, s in zip(times, probs):
+            if s <= 0.5:
+                median = float(t)
+                break
+
+        # Risk score: pycox returns log-partial-hazard; compare against the
+        # cohort vector saved at training time (DeepSurv-specific scale).
+        with torch.no_grad():
+            patient_risk = float(ds["model"].predict(Xp).reshape(-1)[0])
+        cohort_risk = ds["cohort_risk"]
+        percentile = float((cohort_risk < patient_risk).mean() * 100)
+
+        return {
+            "survival_curve": {"times": times.tolist(), "probs": probs.tolist()},
+            "asd_free_prob": horizons,
+            "median_time_months": median,
+            "risk_percentile": percentile,
+            "patient_risk": patient_risk,
+            "pca_scores": pca_scores,
+            "model": "deepsurv",
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

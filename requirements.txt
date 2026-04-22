@@ -5,3 +5,9 @@ pandas
 scikit-survival
 scikit-learn
 lifelines
+# DeepSurv stack — torch CPU build keeps the image lean (~200 MB vs 2+ GB
+# for the CUDA wheel). Render's free tier has no GPU anyway.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.0.1+cpu
+torchtuples==0.2.2
+pycox==0.3.0

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sksurv, sklearn, lifelines, pandas; print\\('sksurv', sksurv.__version__\\); print\\('sklearn', sklearn.__version__\\)\")",
+      "Bash(python experiments/extended_models.py)",
+      "Bash(python experiments/calibration_ensemble.py)"
+    ]
+  }
+}
