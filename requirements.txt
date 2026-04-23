@@ -11,4 +11,4 @@ lifelines
 torch==2.0.1+cpu
 torchtuples==0.2.2
 pycox==0.3.0
-shap==0.51.0
+shap==0.45.1
