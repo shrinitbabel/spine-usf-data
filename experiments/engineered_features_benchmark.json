@@ -1,0 +1,53 @@
+{
+  "results": {
+    "RSF": {
+      "mean": 0.5774631570875853,
+      "std": 0.0859721244905294,
+      "min": 0.42574257425742573,
+      "max": 0.6848484848484848
+    },
+    "DeepSurv": {
+      "mean": 0.5364969644793979,
+      "std": 0.08331999650970948,
+      "min": 0.4423076923076923,
+      "max": 0.723404255319149
+    },
+    "GBSA": {
+      "mean": 0.5852390076281068,
+      "std": 0.07979691172341129,
+      "min": 0.44884488448844884,
+      "max": 0.7049608355091384
+    },
+    "CWGB": {
+      "mean": 0.5899234362785023,
+      "std": 0.0674659205820074,
+      "min": 0.5013054830287206,
+      "max": 0.7526595744680851
+    },
+    "Coxnet": {
+      "mean": 0.5074755923457076,
+      "std": 0.04302296114147697,
+      "min": 0.46534653465346537,
+      "max": 0.6223021582733813
+    }
+  },
+  "n_features": 16,
+  "feature_names": [
+    "Age",
+    "Sex",
+    "BMI",
+    "prior_back_surgery",
+    "dx_degenerative_any",
+    "dx_deformity_any",
+    "levels_fused_count",
+    "lumbosacral_construct",
+    "long_construct",
+    "complex_surgery",
+    "mis_approach",
+    "length_of_stay",
+    "major_complication_any",
+    "pca_num_1",
+    "pca_num_2",
+    "pca_num_3"
+  ]
+}

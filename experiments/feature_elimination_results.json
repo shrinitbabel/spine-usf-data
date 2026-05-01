@@ -1,0 +1,670 @@
+{
+  "results": [
+    {
+      "k": 67,
+      "mean": 0.5898510029912764,
+      "std": 0.100795508297926,
+      "min": 0.4752475247524752,
+      "max": 0.8404255319148937,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis",
+        "Anterior + Posterior Apporoach",
+        "dx_scoliosis",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+        "Open",
+        "L1-L2",
+        "ACR (y=1)",
+        "acute thigh paresthesia (immediate post op)",
+        "dx_flat_back",
+        "dx_adjacent_segment",
+        "Additional Procedures w/in surgery_posterior hardware, laminectomy",
+        "infection 1=yes",
+        "L5-S1",
+        "Case/Type of Surgery_l4-5 xlif",
+        "ACR level_L3-L4",
+        "Additional Procedures w/in surgery_posterior hardware",
+        "DVT  1=yes",
+        "Case/Type of Surgery_l4-5 llif",
+        "Osteotomies (yes/no)",
+        "Case/Type of Surgery_xlif l4-l5 w/ diskectomy and perc ped screws",
+        "Case/Type of Surgery_xlif l3-l4",
+        "Case/Type of Surgery_xlif l3-l4 w/ diskectomy",
+        "Case/Type of Surgery_xlif l4-l5 w/ diskectomy",
+        "Case/Type of Surgery_llif l4-l5 w/ perc screws",
+        "Case/Type of Surgery_xlif l4-l5 w/ perc ped screws",
+        "Case/Type of Surgery_xlif l4-l5 w/ perc screw",
+        "Additional Procedures w/in surgery_posterior hardware, Iliac screws",
+        "ACR level_L3-4",
+        "ACR level_L4-L5",
+        "Case/Type of Surgery_llif l4-l5, diskectomy l4-l5",
+        "Case/Type of Surgery_l2-3 llif",
+        "Case/Type of Surgery_l4-l5 xlif",
+        "Case/Type of Surgery_l2-3 xlif",
+        "dx_sagittal_imbalance",
+        "T12-L1",
+        "PE  1=yes",
+        "MI 1=yes",
+        "femoral palsy (knee extension weakness) 1=yes",
+        "Case/Type of Surgery_l1-2 xlif",
+        "Case/Type of Surgery_l2-4 llif",
+        "Case/Type of Surgery_l4-5 x",
+        "Case/Type of Surgery_l2-4 xlif",
+        "Case/Type of Surgery_l2-5 llif",
+        "Case/Type of Surgery_l2-5 xlif",
+        "Case/Type of Surgery_l3-4 llif",
+        "Case/Type of Surgery_l3-4 xlif",
+        "Case/Type of Surgery_l3-5 llif",
+        "hip flexion weakness (iliopsoas weakness)  1=yes"
+      ]
+    },
+    {
+      "k": 50,
+      "mean": 0.5931137734406389,
+      "std": 0.08885873370119848,
+      "min": 0.4884488448844885,
+      "max": 0.8031914893617021,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis",
+        "Anterior + Posterior Apporoach",
+        "dx_scoliosis",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+        "Open",
+        "L1-L2",
+        "ACR (y=1)",
+        "acute thigh paresthesia (immediate post op)",
+        "dx_flat_back",
+        "dx_adjacent_segment",
+        "Additional Procedures w/in surgery_posterior hardware, laminectomy",
+        "infection 1=yes",
+        "L5-S1",
+        "Case/Type of Surgery_l4-5 xlif",
+        "ACR level_L3-L4",
+        "Additional Procedures w/in surgery_posterior hardware",
+        "DVT  1=yes",
+        "Case/Type of Surgery_l4-5 llif",
+        "Osteotomies (yes/no)",
+        "Case/Type of Surgery_xlif l4-l5 w/ diskectomy and perc ped screws",
+        "Case/Type of Surgery_xlif l3-l4",
+        "Case/Type of Surgery_xlif l3-l4 w/ diskectomy",
+        "Case/Type of Surgery_xlif l4-l5 w/ diskectomy",
+        "Case/Type of Surgery_llif l4-l5 w/ perc screws",
+        "Case/Type of Surgery_xlif l4-l5 w/ perc ped screws",
+        "Case/Type of Surgery_xlif l4-l5 w/ perc screw",
+        "Additional Procedures w/in surgery_posterior hardware, Iliac screws",
+        "ACR level_L3-4",
+        "ACR level_L4-L5",
+        "Case/Type of Surgery_llif l4-l5, diskectomy l4-l5",
+        "Case/Type of Surgery_l2-3 llif"
+      ]
+    },
+    {
+      "k": 40,
+      "mean": 0.5869819303745489,
+      "std": 0.09876937033656889,
+      "min": 0.47987616099071206,
+      "max": 0.8351063829787234,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis",
+        "Anterior + Posterior Apporoach",
+        "dx_scoliosis",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+        "Open",
+        "L1-L2",
+        "ACR (y=1)",
+        "acute thigh paresthesia (immediate post op)",
+        "dx_flat_back",
+        "dx_adjacent_segment",
+        "Additional Procedures w/in surgery_posterior hardware, laminectomy",
+        "infection 1=yes",
+        "L5-S1",
+        "Case/Type of Surgery_l4-5 xlif",
+        "ACR level_L3-L4",
+        "Additional Procedures w/in surgery_posterior hardware",
+        "DVT  1=yes",
+        "Case/Type of Surgery_l4-5 llif",
+        "Osteotomies (yes/no)",
+        "Case/Type of Surgery_xlif l4-l5 w/ diskectomy and perc ped screws",
+        "Case/Type of Surgery_xlif l3-l4"
+      ]
+    },
+    {
+      "k": 30,
+      "mean": 0.5787979865195376,
+      "std": 0.08014964414446893,
+      "min": 0.47560975609756095,
+      "max": 0.7659574468085106,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis",
+        "Anterior + Posterior Apporoach",
+        "dx_scoliosis",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+        "Open",
+        "L1-L2",
+        "ACR (y=1)",
+        "acute thigh paresthesia (immediate post op)",
+        "dx_flat_back",
+        "dx_adjacent_segment",
+        "Additional Procedures w/in surgery_posterior hardware, laminectomy"
+      ]
+    },
+    {
+      "k": 25,
+      "mean": 0.5866665119085159,
+      "std": 0.09180416769314059,
+      "min": 0.47678018575851394,
+      "max": 0.8111702127659575,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis",
+        "Anterior + Posterior Apporoach",
+        "dx_scoliosis",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+        "Open",
+        "L1-L2"
+      ]
+    },
+    {
+      "k": 20,
+      "mean": 0.5832648740032731,
+      "std": 0.08928818135398545,
+      "min": 0.46439628482972134,
+      "max": 0.7952127659574468,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check",
+        "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+        "dx_deformity",
+        "Open Check V2",
+        "Additional Procedures w/in surgery_perc screws",
+        "dx_spondylosis"
+      ]
+    },
+    {
+      "k": 15,
+      "mean": 0.586877496163416,
+      "std": 0.07012195076648764,
+      "min": 0.47987616099071206,
+      "max": 0.7127659574468085,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3",
+        "dx_stenosis",
+        "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+        "Standalone XLIF Check"
+      ]
+    },
+    {
+      "k": 12,
+      "mean": 0.5846637865312037,
+      "std": 0.08822366512554561,
+      "min": 0.48048780487804876,
+      "max": 0.773936170212766,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?",
+        "dx_spondylolisthesis",
+        "L2-L3"
+      ]
+    },
+    {
+      "k": 10,
+      "mean": 0.5794027969415027,
+      "std": 0.07754987933195243,
+      "min": 0.4853658536585366,
+      "max": 0.7313829787234043,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4",
+        "L4-L5",
+        "Perc screws?"
+      ]
+    },
+    {
+      "k": 8,
+      "mean": 0.5714966749203129,
+      "std": 0.07348041723517015,
+      "min": 0.45874587458745875,
+      "max": 0.7158273381294964,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)",
+        "(1 = PI>50)",
+        "L3-L4"
+      ]
+    },
+    {
+      "k": 6,
+      "mean": 0.5579242753235316,
+      "std": 0.08007622812911346,
+      "min": 0.42574257425742573,
+      "max": 0.6788511749347258,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age",
+        "Sex",
+        "prior back surgeries? (y=1)"
+      ]
+    },
+    {
+      "k": 4,
+      "mean": 0.5639610290812929,
+      "std": 0.0854087843816283,
+      "min": 0.3927392739273927,
+      "max": 0.7101827676240209,
+      "features": [
+        "pca_num_1",
+        "pca_num_2",
+        "pca_num_3",
+        "Age"
+      ]
+    }
+  ],
+  "best_k": 50,
+  "split_count_ranking": [
+    {
+      "feature": "pca_num_1",
+      "importance": 0.11150159744408945
+    },
+    {
+      "feature": "pca_num_2",
+      "importance": 0.11118210862619808
+    },
+    {
+      "feature": "pca_num_3",
+      "importance": 0.09552715654952076
+    },
+    {
+      "feature": "Age",
+      "importance": 0.08690095846645367
+    },
+    {
+      "feature": "Sex",
+      "importance": 0.0463258785942492
+    },
+    {
+      "feature": "prior back surgeries? (y=1)",
+      "importance": 0.040575079872204475
+    },
+    {
+      "feature": "(1 = PI>50)",
+      "importance": 0.038338658146964855
+    },
+    {
+      "feature": "L3-L4",
+      "importance": 0.03610223642172524
+    },
+    {
+      "feature": "L4-L5",
+      "importance": 0.03610223642172524
+    },
+    {
+      "feature": "Perc screws?",
+      "importance": 0.03546325878594249
+    },
+    {
+      "feature": "dx_spondylolisthesis",
+      "importance": 0.0329073482428115
+    },
+    {
+      "feature": "L2-L3",
+      "importance": 0.03258785942492013
+    },
+    {
+      "feature": "dx_stenosis",
+      "importance": 0.03194888178913738
+    },
+    {
+      "feature": "Retroperitoneal Approach (LLIF \u00b1 ALIF)",
+      "importance": 0.02779552715654952
+    },
+    {
+      "feature": "Standalone XLIF Check",
+      "importance": 0.025559105431309903
+    },
+    {
+      "feature": "PI-LL Mismatch Category (1 = mismatch > +/- 10",
+      "importance": 0.024920127795527155
+    },
+    {
+      "feature": "dx_deformity",
+      "importance": 0.021725239616613417
+    },
+    {
+      "feature": "Open Check V2",
+      "importance": 0.019808306709265176
+    },
+    {
+      "feature": "Additional Procedures w/in surgery_perc screws",
+      "importance": 0.019169329073482427
+    },
+    {
+      "feature": "dx_spondylosis",
+      "importance": 0.018849840255591055
+    },
+    {
+      "feature": "Anterior + Posterior Apporoach",
+      "importance": 0.018210862619808307
+    },
+    {
+      "feature": "dx_scoliosis",
+      "importance": 0.016293929712460065
+    },
+    {
+      "feature": "PI-LL Mismatch Category (1 = mismatch > +/- 9",
+      "importance": 0.016293929712460065
+    },
+    {
+      "feature": "Open",
+      "importance": 0.011821086261980831
+    },
+    {
+      "feature": "L1-L2",
+      "importance": 0.009904153354632588
+    },
+    {
+      "feature": "ACR (y=1)",
+      "importance": 0.009584664536741214
+    },
+    {
+      "feature": "acute thigh paresthesia (immediate post op)",
+      "importance": 0.0076677316293929714
+    },
+    {
+      "feature": "dx_flat_back",
+      "importance": 0.007028753993610224
+    },
+    {
+      "feature": "dx_adjacent_segment",
+      "importance": 0.0025559105431309905
+    },
+    {
+      "feature": "Additional Procedures w/in surgery_posterior hardware, laminectomy",
+      "importance": 0.001597444089456869
+    },
+    {
+      "feature": "infection 1=yes",
+      "importance": 0.001597444089456869
+    },
+    {
+      "feature": "L5-S1",
+      "importance": 0.0012779552715654952
+    },
+    {
+      "feature": "Case/Type of Surgery_l4-5 xlif",
+      "importance": 0.0009584664536741214
+    },
+    {
+      "feature": "ACR level_L3-L4",
+      "importance": 0.0006389776357827476
+    },
+    {
+      "feature": "Additional Procedures w/in surgery_posterior hardware",
+      "importance": 0.0003194888178913738
+    },
+    {
+      "feature": "DVT  1=yes",
+      "importance": 0.0003194888178913738
+    },
+    {
+      "feature": "Case/Type of Surgery_l4-5 llif",
+      "importance": 0.0003194888178913738
+    },
+    {
+      "feature": "Osteotomies (yes/no)",
+      "importance": 0.0003194888178913738
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l4-l5 w/ diskectomy and perc ped screws",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l3-l4",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l3-l4 w/ diskectomy",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l4-l5 w/ diskectomy",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_llif l4-l5 w/ perc screws",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l4-l5 w/ perc ped screws",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_xlif l4-l5 w/ perc screw",
+      "importance": 0.0
+    },
+    {
+      "feature": "Additional Procedures w/in surgery_posterior hardware, Iliac screws",
+      "importance": 0.0
+    },
+    {
+      "feature": "ACR level_L3-4",
+      "importance": 0.0
+    },
+    {
+      "feature": "ACR level_L4-L5",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_llif l4-l5, diskectomy l4-l5",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-3 llif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l4-l5 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-3 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "dx_sagittal_imbalance",
+      "importance": 0.0
+    },
+    {
+      "feature": "T12-L1",
+      "importance": 0.0
+    },
+    {
+      "feature": "PE  1=yes",
+      "importance": 0.0
+    },
+    {
+      "feature": "MI 1=yes",
+      "importance": 0.0
+    },
+    {
+      "feature": "femoral palsy (knee extension weakness) 1=yes",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l1-2 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-4 llif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l4-5 x",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-4 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-5 llif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l2-5 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l3-4 llif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l3-4 xlif",
+      "importance": 0.0
+    },
+    {
+      "feature": "Case/Type of Surgery_l3-5 llif",
+      "importance": 0.0
+    },
+    {
+      "feature": "hip flexion weakness (iliopsoas weakness)  1=yes",
+      "importance": 0.0
+    }
+  ]
+}

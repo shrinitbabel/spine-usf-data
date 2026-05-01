@@ -70,7 +70,7 @@ clean_feature_cols = [
     "dx_adjacent_segment","dx_spondylolisthesis","dx_spondylosis","dx_stenosis",
     "dx_scoliosis","dx_flat_back","dx_sagittal_imbalance","dx_post_laminectomy","dx_deformity",
     "Case/Type of Surgery","Additional Procedures w/in surgery",
-    "T12-L1","L1-L2","L2-L3","L3-L4","L4-L5","L5-S1",
+    "levels_fused_count",   # Variant C: single integer instead of 6 binaries
     "Perc screws?","Open","Open Check V2","Standalone XLIF Check",
     "Retroperitoneal Approach (LLIF ± ALIF)","Anterior + Posterior Apporoach",
     "Osteotomies (yes/no)","osteotomy level",
@@ -89,7 +89,7 @@ present = [c for c in clean_feature_cols if c in df.columns]
 numeric_like = [
     "BMI","ALIF Count","Lateral Count","Average PI","PI-LL angle mismatch",
     "ABS PI-LL angle mismatch","Post-op SS","post PI","post PT","post LL",
-    "post SVA","length of hospital stay (d)",
+    "post SVA","length of hospital stay (d)","levels_fused_count",
 ]
 
 X_raw = df[present].copy()

@@ -257,6 +257,12 @@ def build_raw_row(payload: dict) -> pd.DataFrame:
         col = FIELD_TO_COL.get(field)
         if col is not None and col in row:
             row[col] = val
+    # Variant C: the model uses a single levels_fused_count integer rather
+    # than the six per-level binaries the form sends. Compute it here from
+    # the form's level toggles so the form layout doesn't have to change.
+    if "levels_fused_count" in row:
+        level_keys = ["T12_L1", "L1_L2", "L2_L3", "L3_L4", "L4_L5", "L5_S1"]
+        row["levels_fused_count"] = sum(int(payload.get(k, 0) or 0) for k in level_keys)
     return pd.DataFrame([row])
 
 
