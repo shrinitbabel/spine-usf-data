@@ -1,2 +1,28 @@
+# Virtual env / external libs
 .venv/
 auton-survival/
+
+# Archive of deprecated/superseded files (kept on disk, not tracked)
+archive/
+
+# Python caches & build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local task / output buffers
+*.log
+*.tmp
