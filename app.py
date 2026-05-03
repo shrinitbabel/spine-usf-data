@@ -653,6 +653,9 @@ def _run_survshap_batch(explainer, x_row_df, B, seed):
     t_vals = np.array([float(c.replace("t = ", "")) for c in t_cols])
     nearest = [t_cols[int(np.argmin(np.abs(t_vals - h)))] for h in SURVSHAP_HORIZONS]
     out = res.set_index(feat_col)[nearest].abs().astype(float)
+    # PredictSurvSHAP can emit duplicate rows per variable in some versions;
+    # collapse to one row per feature so downstream Series.loc returns a scalar.
+    out = out[~out.index.duplicated(keep="first")]
     out.columns = [f"{int(h)}mo" for h in SURVSHAP_HORIZONS]
     return out
 
@@ -669,7 +672,9 @@ def _summarize_survshap(imp_df: pd.DataFrame, top_k: int = 10) -> dict:
     delta = (top["60mo"] - top["12mo"]) / (top["mean"] + eps)
     features = []
     for fname, row in top.iterrows():
-        d = float(delta.loc[fname])
+        # Defensive scalar extraction — handles any residual index duplication
+        d_raw = delta.loc[fname]
+        d = float(np.asarray(d_raw).flat[0]) if hasattr(d_raw, "__len__") else float(d_raw)
         if d > 0.4:
             tag = "late"
         elif d < -0.4:
@@ -690,7 +695,7 @@ def _summarize_survshap(imp_df: pd.DataFrame, top_k: int = 10) -> dict:
 @app.post("/predict/asd/survshap")
 async def explain_asd_survshap(
     inp: PatientInput,
-    mode: str = Query("fast", regex="^(fast|publication)$"),
+    mode: str = Query("fast", pattern="^(fast|publication)$"),
 ):
     """Per-patient time-dependent SHAP attribution (survSHAP(t)).
 
