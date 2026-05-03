@@ -1,13 +1,14 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import numpy as np
 import pandas as pd
 import pickle
+import threading
 
 import torch
 import torchtuples as tt
@@ -220,10 +221,18 @@ async def lifespan(app: FastAPI):
     except Exception as ex:
         print(f"WARN: SHAP explainer failed to initialize: {ex}")
         state["shap_explainer"] = None
+
+    # survSHAP(t) is initialized lazily on first request — building the
+    # SurvivalModelExplainer requires the full training cohort in RAM and
+    # would block Render's startup health check otherwise. See
+    # _ensure_survshap_explainer() below.
+    state["X_train_full"] = np.asarray(bundle["X_vals"], dtype=float)
+    state["survshap_explainer"] = None
+    state["survshap_lock"] = threading.Lock()
     yield
 
 
-app = FastAPI(title="ASD Survival API", version="1.5", lifespan=lifespan)
+app = FastAPI(title="ASD Survival API", version="1.6", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -240,6 +249,7 @@ def healthz():
         "model_loaded": "rsf" in state,
         "deepsurv_loaded": state.get("deepsurv") is not None,
         "shap_loaded": state.get("shap_explainer") is not None,
+        "survshap_warm": state.get("survshap_explainer") is not None,
     }
 
 
@@ -585,5 +595,254 @@ async def explain_asd(inp: PatientInput):
             "cache-control": "no-cache, no-transform",
             "connection": "keep-alive",
             "x-accel-buffering": "no",   # disables nginx-style buffering on Render
+        },
+    )
+
+
+# ----------------------------------------------------------------------
+# survSHAP(t) — time-dependent SHAP explanation (Server-Sent Events)
+# ----------------------------------------------------------------------
+
+SURVSHAP_HORIZONS = [12.0, 24.0, 36.0, 48.0, 60.0]
+
+
+def _ensure_survshap_explainer():
+    """Lazy-init the SurvivalModelExplainer. Heavy: holds the full training
+    cohort + a clone of the RSF, ~80–120MB. Built on first /survshap call so
+    Render's startup probe stays snappy."""
+    if state.get("survshap_explainer") is not None:
+        return state["survshap_explainer"]
+    with state["survshap_lock"]:
+        if state.get("survshap_explainer") is not None:
+            return state["survshap_explainer"]
+        # Lazy import — survshap pulls pandas/scipy heavy paths and we don't
+        # want to slow cold-start when the user only hits /predict/asd.
+        from survshap import SurvivalModelExplainer
+        from sksurv.util import Surv
+        # Reconstruct (event, time) for the background — we don't have the
+        # raw labels in the bundle, so we use a synthetic placeholder.
+        # SurvivalModelExplainer only needs `y` for event-time alignment in
+        # PredictSurvSHAP; the actual SHAP attribution does not depend on it.
+        n = state["X_train_full"].shape[0]
+        rng = np.random.RandomState(42)
+        synth_t = rng.uniform(6, 72, size=n)
+        synth_e = rng.binomial(1, 0.22, size=n).astype(bool)
+        y_bg = Surv.from_arrays(event=synth_e, time=synth_t)
+        X_df = pd.DataFrame(state["X_train_full"], columns=state["feature_cols"])
+        state["survshap_explainer"] = SurvivalModelExplainer(
+            model=state["rsf"], data=X_df, y=y_bg
+        )
+        return state["survshap_explainer"]
+
+
+def _run_survshap_batch(explainer, x_row_df, B, seed):
+    """One PredictSurvSHAP pass at sampling permutation count B. Returns a
+    DataFrame indexed by feature name with one column per horizon."""
+    from survshap import PredictSurvSHAP
+    ps = PredictSurvSHAP(
+        function_type="sf",
+        calculation_method="sampling",
+        aggregation_method="integral",
+        B=B,
+        random_state=seed,
+    )
+    ps.fit(explainer, x_row_df, timestamps=np.array(SURVSHAP_HORIZONS))
+    res = ps.result
+    feat_col = "variable_name" if "variable_name" in res.columns else "variable"
+    t_cols = [c for c in res.columns if c.startswith("t = ")]
+    t_vals = np.array([float(c.replace("t = ", "")) for c in t_cols])
+    nearest = [t_cols[int(np.argmin(np.abs(t_vals - h)))] for h in SURVSHAP_HORIZONS]
+    out = res.set_index(feat_col)[nearest].abs().astype(float)
+    out.columns = [f"{int(h)}mo" for h in SURVSHAP_HORIZONS]
+    return out
+
+
+def _summarize_survshap(imp_df: pd.DataFrame, top_k: int = 10) -> dict:
+    """Build the wire payload from a (feature × horizon) |SHAP| matrix."""
+    h_cols = [f"{int(h)}mo" for h in SURVSHAP_HORIZONS]
+    imp_df = imp_df.copy()
+    imp_df["mean"] = imp_df[h_cols].mean(axis=1)
+    imp_df = imp_df.sort_values("mean", ascending=False)
+    top = imp_df.head(top_k)
+    # Late-driver index: positive = late driver, negative = early driver
+    eps = 1e-9
+    delta = (top["60mo"] - top["12mo"]) / (top["mean"] + eps)
+    features = []
+    for fname, row in top.iterrows():
+        d = float(delta.loc[fname])
+        if d > 0.4:
+            tag = "late"
+        elif d < -0.4:
+            tag = "early"
+        else:
+            tag = "stable"
+        features.append({
+            "feature": fname,
+            "display_name": _pretty_feature(fname),
+            "by_horizon": {h: float(row[h]) for h in h_cols},
+            "mean_abs_shap": float(row["mean"]),
+            "late_driver_index": d,
+            "driver_class": tag,
+        })
+    return {"horizons": [int(h) for h in SURVSHAP_HORIZONS], "features": features}
+
+
+@app.post("/predict/asd/survshap")
+async def explain_asd_survshap(
+    inp: PatientInput,
+    mode: str = Query("fast", regex="^(fast|publication)$"),
+):
+    """Per-patient time-dependent SHAP attribution (survSHAP(t)).
+
+    survSHAP explains the *survival function* over multiple horizons rather
+    than a single risk score, so it surfaces which features drive ASD risk
+    *early* (≤24 mo, surgical-construct factors) vs *late* (≥36 mo,
+    spinopelvic alignment). Heavy: 15–90s per patient on Render's CPU.
+
+    Modes:
+      fast        — B=5 permutations, ~15–25s, noisier bars
+      publication — B=25 permutations, ~60–90s, the same setup used for
+                    the manuscript figures (fig32–fig37)
+
+    Stream events:
+      starting   — preprocessing
+      preview    — static SHAP fallback so the UI has something to render
+                   immediately (~1s)
+      computing  — survSHAP in progress, with batch_index/total + partial
+                   per-horizon attributions that sharpen as B grows
+      ready      — final survSHAP payload
+      error      — anything went wrong
+    """
+    payload = inp.model_dump()
+    target_B = 5 if mode == "fast" else 25
+    # Refinement schedule — emit a partial result after each batch so the UI
+    # can animate the bars converging. Five ticks for "publication", one
+    # tick for "fast" (the whole point of fast is one shot).
+    if mode == "fast":
+        batch_sizes = [5]
+    else:
+        batch_sizes = [5, 5, 5, 5, 5]  # 5 partials, total B=25
+
+    async def generate():
+        try:
+            yield _sse({"status": "starting",
+                        "message": "Preparing patient features…",
+                        "mode": mode, "target_B": target_B,
+                        "horizons": [int(h) for h in SURVSHAP_HORIZONS]})
+
+            X_raw = build_raw_row(payload)
+            Xp, _ = preprocess(X_raw)
+            x_row_df = pd.DataFrame(Xp, columns=state["feature_cols"])
+
+            # --- Preview: static SHAP first (~1s) so the UI has bars
+            #     to display while the slow survSHAP runs ----------------
+            if state.get("shap_explainer") is not None:
+                try:
+                    static_obj = await asyncio.to_thread(
+                        state["shap_explainer"], Xp
+                    )
+                    sv_static = np.asarray(static_obj.values[0], dtype=float)
+                    feats = state["feature_cols"]
+                    order = np.argsort(np.abs(sv_static))[::-1][:10]
+                    preview = [{
+                        "feature": feats[i],
+                        "display_name": _pretty_feature(feats[i]),
+                        "shap_value": float(sv_static[i]),
+                        "patient_value": float(Xp[0, i]),
+                    } for i in order]
+                    yield _sse({"status": "preview",
+                                "message": "Static SHAP ready — survSHAP(t) refining…",
+                                "preview": preview})
+                except Exception as ex:
+                    yield _sse({"status": "preview_skipped",
+                                "message": f"static SHAP failed: {ex}"})
+
+            # --- survSHAP: lazy-init explainer on first call -------------
+            yield _sse({"status": "computing",
+                        "message": "Building survSHAP explainer…",
+                        "batch_index": 0, "batch_total": len(batch_sizes),
+                        "B_completed": 0, "B_target": target_B})
+            explainer = await asyncio.to_thread(_ensure_survshap_explainer)
+
+            # --- Refinement loop -----------------------------------------
+            # Each batch is an *independent* PredictSurvSHAP run with a
+            # different seed; we average the running mean to refine. This
+            # is statistically equivalent to one B=25 run (since the
+            # estimator is just a sample mean over permutations).
+            cum = None
+            B_done = 0
+            t0 = asyncio.get_event_loop().time()
+            for k, B in enumerate(batch_sizes, start=1):
+                # Heartbeat every second while this batch runs
+                task = asyncio.create_task(asyncio.to_thread(
+                    _run_survshap_batch, explainer, x_row_df, B, 42 + k
+                ))
+                while not task.done():
+                    await asyncio.sleep(1.0)
+                    elapsed = asyncio.get_event_loop().time() - t0
+                    yield _sse({
+                        "status": "computing",
+                        "message": f"survSHAP batch {k}/{len(batch_sizes)} (B+={B})…",
+                        "batch_index": k, "batch_total": len(batch_sizes),
+                        "B_completed": B_done, "B_target": target_B,
+                        "elapsed_s": round(elapsed, 1),
+                    })
+                batch_imp = await task
+
+                # Running mean across batches (weighted by B per batch)
+                if cum is None:
+                    cum = batch_imp * B
+                else:
+                    cum = cum.add(batch_imp * B, fill_value=0.0)
+                B_done += B
+                running = cum / B_done
+
+                partial = _summarize_survshap(running, top_k=10)
+                elapsed = asyncio.get_event_loop().time() - t0
+                yield _sse({
+                    "status": "computing",
+                    "message": f"Partial result after B={B_done}",
+                    "batch_index": k, "batch_total": len(batch_sizes),
+                    "B_completed": B_done, "B_target": target_B,
+                    "elapsed_s": round(elapsed, 1),
+                    "partial": partial,
+                })
+
+            # --- Final payload ------------------------------------------
+            final_payload = _summarize_survshap(running, top_k=15)
+            patient_risk = float(state["rsf"].predict(Xp)[0])
+            cohort_risk = state["cohort_risk"]
+            percentile = float((cohort_risk < patient_risk).mean() * 100)
+
+            yield _sse({
+                "status": "ready",
+                "elapsed_s": round(asyncio.get_event_loop().time() - t0, 1),
+                "B_completed": B_done,
+                "mode": mode,
+                "horizons": final_payload["horizons"],
+                "features": final_payload["features"],
+                "patient_risk": patient_risk,
+                "risk_percentile": percentile,
+                "model": "rsf+survshap",
+                "note": (
+                    "survSHAP(t) decomposes the predicted survival function into "
+                    "per-feature attributions at each follow-up horizon. Features "
+                    "tagged 'early' drive ASD risk in the first 12–24 months "
+                    "(typically surgical-construct factors); 'late' drivers "
+                    "dominate at 36–60 months (typically spinopelvic alignment "
+                    "indices). Discrimination drops past 48 mo (C ≈ 0.55), so "
+                    "treat 60-mo attributions as directional."
+                ),
+            })
+        except Exception as e:
+            yield _sse({"status": "error", "message": str(e)})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "cache-control": "no-cache, no-transform",
+            "connection": "keep-alive",
+            "x-accel-buffering": "no",
         },
     )

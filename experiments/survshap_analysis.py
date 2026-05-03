@@ -138,7 +138,7 @@ ax.set_yticks(range(TOP)); ax.set_yticklabels([f.replace("Additional Procedures 
 ax.set_xlabel("Follow-up horizon")
 ax.set_title("Time-dependent feature importance (mean |survSHAP(t)|)")
 fig.colorbar(im, ax=ax, label="mean |SHAP|"); fig.tight_layout()
-fig.savefig(FIGS / "fig32_survshap_global_over_time.png", dpi=180); plt.close(fig)
+fig.savefig(FIGS / "fig32_survshap_global_over_time.png", dpi=300); plt.close(fig)
 
 # fig33: line plot of top-5
 TOP5 = imp_df.head(5).index.tolist()
@@ -149,7 +149,7 @@ for f in TOP5:
 ax.set_xlabel("Follow-up horizon (months)"); ax.set_ylabel("mean |SHAP|")
 ax.set_title("Temporal evolution of top-5 risk drivers")
 ax.legend(loc="best", fontsize=8); ax.grid(True, alpha=0.3); fig.tight_layout()
-fig.savefig(FIGS / "fig33_survshap_temporal_top5.png", dpi=180); plt.close(fig)
+fig.savefig(FIGS / "fig33_survshap_temporal_top5.png", dpi=300); plt.close(fig)
 
 # fig35: static vs time-averaged comparison (skip fig34 individual case for now -
 #        requires re-running PredictSurvSHAP per case which we already have via checkpoint)
@@ -168,6 +168,6 @@ ax.barh(yp + 0.2, merged["survSHAP_avg"], 0.4, label="survSHAP(t) (time-avg)", c
 ax.set_yticks(yp); ax.set_yticklabels([f[:40] for f in merged.index], fontsize=8)
 ax.invert_yaxis(); ax.set_xlabel("mean |SHAP|"); ax.legend()
 ax.set_title("Static vs time-dependent SHAP ranking"); fig.tight_layout()
-fig.savefig(FIGS / "fig35_survshap_vs_static_shap.png", dpi=180); plt.close(fig)
+fig.savefig(FIGS / "fig35_survshap_vs_static_shap.png", dpi=300); plt.close(fig)
 
 print(f"[{time.strftime('%H:%M:%S')}] all figures written to figures/", flush=True)

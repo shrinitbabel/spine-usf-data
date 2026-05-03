@@ -115,7 +115,8 @@ All endpoints accept JSON. Example payload schema is in `app.py` → `class Pati
 | `/predict/asd` | POST | RSF risk score + survival curve |
 | `/predict/asd/deepsurv` | POST | DeepSurv risk score + survival curve |
 | `/predict/asd/ensemble` | POST | Convex ensemble of RSF + DeepSurv |
-| `/predict/asd/explain` | POST (SSE) | Streaming SHAP feature attributions |
+| `/predict/asd/explain` | POST (SSE) | Streaming static SHAP feature attributions (~5–12s first call, ~0.6s after) |
+| `/predict/asd/survshap` | POST (SSE) | Streaming time-dependent SHAP (survSHAP(t)) at 12/24/36/48/60 mo. `?mode=fast` (B=5, ~15–25s) or `?mode=publication` (B=25, ~60–90s, default fast). Emits `preview` (static SHAP) → `computing` (per-batch refinements) → `ready` |
 
 ### Minimal prediction example
 
