@@ -120,9 +120,11 @@ for row, fi in enumerate(top_idx):
 ax.axvline(0, color="grey", linestyle=":", linewidth=1, alpha=0.7)
 ax.set_yticks(range(top_n))
 ax.set_yticklabels(labels)
-ax.set_xlabel("SHAP value\n(contribution to predicted ASD risk)")
-ax.set_title("Per-patient SHAP contributions across the cohort  (top 15 features)",
-             pad=14)
+ax.set_xlabel("SHAP value\n(contribution to predicted ASD risk, integrated over the full follow-up window)")
+ax.set_title(
+    "Per-patient SHAP contributions to overall ASD risk across follow-up  (top 15 features)",
+    pad=14,
+)
 ax.grid(axis="x", alpha=0.25, linestyle="--")
 ax.set_axisbelow(True)
 ax.set_ylim(-0.7, top_n - 0.3)

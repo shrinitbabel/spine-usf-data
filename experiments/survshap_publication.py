@@ -91,7 +91,7 @@ ax.set_xticklabels([f"{h} mo" for h in HORIZON_VALS])
 ax.set_yticks(range(TOP))
 ax.set_yticklabels([pretty(f) for f in top_feats])
 ax.set_xlabel("Follow-up horizon")
-ax.set_title("Time-dependent feature importance  (mean |survSHAP(t)|)", pad=14)
+ax.set_title("Feature importance at each follow-up horizon  (mean |survSHAP(t)|)", pad=14)
 cbar = fig.colorbar(im, ax=ax, fraction=0.04, pad=0.02)
 cbar.set_label("Mean |SHAP|", rotation=270, labelpad=14)
 fig.savefig(FIG / "fig32_survshap_global_over_time.png")
@@ -109,7 +109,7 @@ for f, col in zip(TOP5, palette):
 ax.set_xticks(HORIZON_VALS)
 ax.set_xlabel("Follow-up horizon (months)")
 ax.set_ylabel("Mean |SHAP|")
-ax.set_title("Temporal evolution of the top-5 risk drivers", pad=14)
+ax.set_title("How the top-5 risk drivers shift across the 5-year follow-up", pad=14)
 ax.legend(loc="best", fontsize=9, frameon=False)
 ax.grid(True, alpha=0.3, linestyle="--")
 ax.set_axisbelow(True)
@@ -123,18 +123,22 @@ ranks_t = imp[HORIZON_COLS].rank(ascending=False)
 TOPN = 12
 keep = ranks_t["12mo"].nsmallest(TOPN).index.union(ranks_t["60mo"].nsmallest(TOPN).index)
 keep_df = ranks_t.loc[keep]
-fig, ax = plt.subplots(figsize=(12, 7.5))
+fig, ax = plt.subplots(figsize=(9, 7.5))
 palette = plt.cm.tab20(np.linspace(0, 1, len(keep_df)))
 for (feat, row), col in zip(keep_df.iterrows(), palette):
     ax.plot(HORIZON_VALS, row.values, "-o", color=col, lw=2)
-    ax.annotate(pretty(feat), xy=(60.5, row.values[-1]),
-                fontsize=9, va="center", color=col)
+    # Place labels just past the last data point; clip_on=False lets them
+    # spill outside the axes, and savefig bbox='tight' crops to fit.
+    ax.annotate(pretty(feat), xy=(61, row.values[-1]),
+                fontsize=9, va="center", color=col,
+                annotation_clip=False)
 ax.set_xticks(HORIZON_VALS)
 ax.set_xlabel("Follow-up horizon (months)")
-ax.set_ylabel("Feature rank (1 = most important)")
+ax.set_ylabel("Risk-driver rank  (1 = strongest)")
+ax.set_yticks(range(1, TOPN + 9))   # whole-number ranks: 1, 2, 3, …, 20
 ax.invert_yaxis()
 ax.set_ylim(TOPN + 8, 0.5)
-ax.set_xlim(8, 165)
+ax.set_xlim(8, 64)
 ax.set_title("Feature ranking shifts across follow-up horizons (bump chart)", pad=14)
 ax.grid(True, alpha=0.3, linestyle="--")
 ax.set_axisbelow(True)
@@ -214,8 +218,14 @@ ax.set_yticks(y)
 ax.set_yticklabels([pretty(f) for f in union])
 ax.invert_yaxis()
 ax.invert_xaxis()
-ax.set_xlabel("Rank (1 = most important)")
-ax.set_title("Static SHAP vs time-dependent survSHAP(t) feature ranking", pad=14)
+ax.set_xlabel("Risk-driver rank  (1 = strongest)")
+ax.set_title(
+    "Overall-risk SHAP vs horizon-specific survSHAP(t): feature ranking",
+    pad=14,
+)
+# Integer rank ticks
+from matplotlib.ticker import MaxNLocator
+ax.xaxis.set_major_locator(MaxNLocator(integer=True))
 ax.legend(loc="lower right", frameon=False)
 ax.grid(True, alpha=0.3, linestyle="--")
 ax.set_axisbelow(True)

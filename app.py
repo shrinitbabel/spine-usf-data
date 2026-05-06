@@ -1,7 +1,15 @@
 import asyncio
 import json
+import warnings
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
+
+# RSF was fit on a numpy array; survshap passes a DataFrame for predict_survival_function.
+# Cosmetic warning — it floods Render logs and hides real issues.
+warnings.filterwarnings(
+    "ignore",
+    message="X has feature names, but RandomSurvivalForest was fitted without feature names",
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -329,6 +337,11 @@ def predict_asd(inp: PatientInput):
             "risk_percentile": percentile,
             "patient_risk": patient_risk,
             "pca_scores": pca_scores,
+            # Bake loadings into the prediction response so the frontend has
+            # the composite breakdown without needing a second /model-info
+            # round-trip — that one races with the long-running /survshap
+            # request on a single-worker Render instance.
+            "pca_loadings": state["pca_loadings"],
         }
 
     except Exception as e:
@@ -397,6 +410,7 @@ def predict_asd_deepsurv(inp: PatientInput):
             "risk_percentile": percentile,
             "patient_risk": patient_risk,
             "pca_scores": pca_scores,
+            "pca_loadings": state["pca_loadings"],
             "model": "deepsurv",
         }
 
@@ -469,6 +483,7 @@ def predict_asd_ensemble(inp: PatientInput):
             "median_time_months": median,
             "risk_percentile": percentile,
             "pca_scores": pca_scores,
+            "pca_loadings": state["pca_loadings"],
             "model": "ensemble",
             "components": {
                 "rsf_percentile": rsf_pct,
