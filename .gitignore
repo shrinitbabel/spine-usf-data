@@ -26,3 +26,14 @@ Thumbs.db
 # Local task / output buffers
 *.log
 *.tmp
+
+# Generated figures - regenerable from the scripts in experiments/ (+ data)
+figures/
+
+# Figure-generation scripts (kept on disk, not tracked)
+experiments/generate_graphical_abstract.py
+experiments/generate_paper_figures.py
+experiments/shap_dependence_plots.py
+experiments/shap_summary_publication.py
+experiments/survshap_publication.py
+experiments/survshap_rank_shift.py
